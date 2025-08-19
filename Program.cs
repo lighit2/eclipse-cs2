@@ -151,7 +151,7 @@ while (true)
         // populate entities using shuffled indices
         for (int ii = 0; ii < indices.Length; ii++)
         {
-            int i = indices[ii]; // реальное использование shuffle
+            int i = indices[ii];
 
             // get current controller
             IntPtr currentController = swed.ReadPointer(listEntry, i * 0x78);
@@ -160,7 +160,7 @@ while (true)
             int pawnHandle = swed.ReadInt(currentController, m_hPlayerPawn);
             if (pawnHandle == 0) continue;
 
-            // get current pawn)))
+            // get current pawn
             IntPtr listEntry2 = swed.ReadPointer(entityList, 0x8 * ((pawnHandle & 0x7FFF) >> 9) + 0x10);
             if (listEntry2 == IntPtr.Zero) continue;
 
@@ -189,7 +189,7 @@ while (true)
             }
             catch
             {
-                continue; // if pizda
+                continue;
             }
 
             // для ног и головы
@@ -199,7 +199,7 @@ while (true)
             // validate
             if (!IsFinite(targetPos) && !IsFinite(targetViewPos)) continue;
 
-            // -------------------- lerp для плавности (используем кеш) !!!!
+            // -------------------- lerp для плавности (используем кеш)
             if (prevPositions.TryGetValue(currentPawn, out Vector2 prevPos))
                 entity.position2D = IsFinite(prevPos) ? Vector2.Lerp(prevPos, targetPos, 0.3f) : targetPos;
             else
@@ -244,11 +244,12 @@ while (true)
         // единый sleep: base + jitter + редкий длинный пробел (UNDETECTED) бля буду
         int baseDelay = rnd.Next(8, 16);  // 8–15 ms
         int jitterMs = rnd.Next(0, 4);    // 0–3 ms
-        //int longPause = (rnd.NextDouble() < 0.012) ? (50 + rnd.Next(0, 150)) : 0; // редкая длинная пауза
+        //int longPause = (rnd.NextDouble() < 0.012) ? (50 + rnd.Next(0, 150)) : 0; // редкая длинная пауза для производительности CPU
         //Thread.Sleep(baseDelay + jitterMs + longPause);
     }
     catch
     {
         Thread.Sleep(200);
     }
+
 }
