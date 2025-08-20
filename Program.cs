@@ -8,6 +8,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Security.Cryptography.X509Certificates;
 
 // main logic
 
@@ -73,7 +75,7 @@ int m_vecViewOffset = 0xD98;
 int m_modelState = 0x190;
 int m_pGameSceneNode = 0x330;
 int m_iHealth = 0x34C;
-
+int m_iszPlayerName = 0x6E8;
 
 // anti-detect
 Random rnd = new Random(unchecked(Environment.TickCount * 31 + DateTime.Now.Millisecond));
@@ -151,7 +153,7 @@ while (true)
         // populate entities using shuffled indices
         for (int ii = 0; ii < indices.Length; ii++)
         {
-            int i = indices[ii];
+            int i = indices[ii]; // реальное использование shuffle
 
             // get current controller
             IntPtr currentController = swed.ReadPointer(listEntry, i * 0x78);
@@ -160,7 +162,7 @@ while (true)
             int pawnHandle = swed.ReadInt(currentController, m_hPlayerPawn);
             if (pawnHandle == 0) continue;
 
-            // get current pawn
+            // get current pawn)))
             IntPtr listEntry2 = swed.ReadPointer(entityList, 0x8 * ((pawnHandle & 0x7FFF) >> 9) + 0x10);
             if (listEntry2 == IntPtr.Zero) continue;
 
@@ -186,10 +188,16 @@ while (true)
                 entity.bones = Calculate.ReadBones(boneMatrix, swed);
                 entity.bones2D = Calculate.ReadBones2D(entity.bones, viewMatrix, screenSize);
                 entity.health = swed.ReadInt(currentPawn, m_iHealth);
+
+                // entity.name = swed.ReadString(currentController, m_iszPlayerName, 16); был баг с ?????
+                
+                // fix
+                byte[] nameBytes = swed.ReadBytes(currentController, m_iszPlayerName, 16); // читаем как байты
+                entity.name = System.Text.Encoding.UTF8.GetString(nameBytes).TrimEnd('\0'); // конвертим в строку
             }
             catch
             {
-                continue;
+                continue; // if pizda
             }
 
             // для ног и головы
@@ -199,7 +207,7 @@ while (true)
             // validate
             if (!IsFinite(targetPos) && !IsFinite(targetViewPos)) continue;
 
-            // -------------------- lerp для плавности (используем кеш)
+            // -------------------- lerp для плавности (используем кеш) !!!!
             if (prevPositions.TryGetValue(currentPawn, out Vector2 prevPos))
                 entity.position2D = IsFinite(prevPos) ? Vector2.Lerp(prevPos, targetPos, 0.3f) : targetPos;
             else
@@ -240,16 +248,16 @@ while (true)
         {
         // swallowing render exceptions
         }
-
         // единый sleep: base + jitter + редкий длинный пробел (UNDETECTED) бля буду
         int baseDelay = rnd.Next(8, 16);  // 8–15 ms
         int jitterMs = rnd.Next(0, 4);    // 0–3 ms
-        //int longPause = (rnd.NextDouble() < 0.012) ? (50 + rnd.Next(0, 150)) : 0; // редкая длинная пауза для производительности CPU
-        //Thread.Sleep(baseDelay + jitterMs + longPause);
+
+        // на судный день VAC
+        // int longPause = (rnd.NextDouble() < 0.012) ? (50 + rnd.Next(0, 150)) : 0; // редкая длинная пауза
+        // Thread.Sleep(baseDelay + jitterMs + longPause);
     }
     catch
     {
         Thread.Sleep(200);
     }
-
 }

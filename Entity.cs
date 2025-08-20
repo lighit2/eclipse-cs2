@@ -17,6 +17,7 @@ namespace eclipse_external
         public Vector2 viewPosition2D {  get; set; }
         public int team {  get; set; }
         public int health { get; set; }
+        public string name { get; set; }
         public float distance { get; set; }
         public IntPtr Pointer;
     }

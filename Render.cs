@@ -10,6 +10,7 @@ using ClickableTransparentOverlay;
 using ImGuiNET;
 using System.Windows;
 using System.ComponentModel.Design;
+using Swed64;
 
 namespace eclipse_external
 {
@@ -25,10 +26,12 @@ namespace eclipse_external
 
         // Gui Element
         private bool enableESP = true;
+        private bool enableWallHack = true;
         private bool enableLine = false;
         private bool enableBones = true;
         private bool enableFr = true;
         private bool enableHealthInfo = true;
+        private bool enableNickName = true;
         private Vector4 enemyColor = new Vector4(1, 0, 0, 1); // red 
         private Vector4 teamColor = new Vector4(0, 1, 0, 1); // green
         private Vector4 boneColor = new Vector4(1, 1, 1, 1); // rgba white
@@ -40,24 +43,35 @@ namespace eclipse_external
 
         protected override void Render()
         {
-            // ImGui Menu
-
             ImGui.Begin("eclispe");
-            ImGui.Checkbox("Enable ESP", ref enableESP);
-            ImGui.Checkbox("Enable Line", ref enableLine);
-            ImGui.Checkbox("Enable Bones", ref enableBones);
-            ImGui.Checkbox("Enable HealthBar", ref enableHealthInfo);
-            ImGui.Checkbox("Disable Friendly Entity", ref enableFr);
-
-            // team color
-            if (ImGui.CollapsingHeader("Team Color"))
-                ImGui.ColorPicker4("##teamcolor", ref teamColor);
-            // enemy color
-            if (ImGui.CollapsingHeader("Enemy Color"))
-                ImGui.ColorPicker4("##enemycolor", ref enemyColor);
-            // bone color
-            if (ImGui.CollapsingHeader("Bone Color"))
-                ImGui.ColorPicker4("##bonecolor", ref boneColor);
+            // ImGui Menu
+            if (ImGui.BeginTabBar("eclipse tab"))
+            {
+                if (ImGui.BeginTabItem("Wallhack"))
+                {
+                    ImGui.Checkbox("Enable WallHack", ref enableWallHack);
+                    ImGui.Checkbox("Enable ESP", ref enableESP);
+                    ImGui.Checkbox("Enable Line", ref enableLine);
+                    ImGui.Checkbox("Enable Bones", ref enableBones);
+                    ImGui.Checkbox("Enable HealthBar", ref enableHealthInfo);
+                    ImGui.Checkbox("Enable NickName", ref enableNickName);
+                    ImGui.Checkbox("Disable Friendly Entity", ref enableFr);
+                    ImGui.EndTabItem();
+                }
+                if (ImGui.BeginTabItem("Color"))
+                {
+                    // team color
+                    if (ImGui.CollapsingHeader("Team Color"))
+                        ImGui.ColorPicker4("##teamcolor", ref teamColor);
+                    // enemy color
+                    if (ImGui.CollapsingHeader("Enemy Color"))
+                        ImGui.ColorPicker4("##enemycolor", ref enemyColor);
+                    // bone color
+                    if (ImGui.CollapsingHeader("Bone Color"))
+                        ImGui.ColorPicker4("##bonecolor", ref boneColor);
+                }
+                ImGui.EndTabBar();
+            }
 
             // draw overlay
             DrawOverlay(screenSize);
@@ -66,7 +80,7 @@ namespace eclipse_external
 
             // текст сверху
             drawList = ImGui.GetForegroundDrawList();
-            string versionText = "eclipse_v1.2 by devlor";
+            string versionText = "eclipse_v1.3.1 by devlor";
             Vector2 textSize = ImGui.CalcTextSize(versionText);
             Vector2 pos = new Vector2(ImGui.GetIO().DisplaySize.X - textSize.X - 10, 10);
 
@@ -82,16 +96,13 @@ namespace eclipse_external
             drawList.AddText(pos, ImGui.ColorConvertFloat4ToU32(mainColor), versionText);
 
             // draw stuff
-            if (enableESP)
+            if (enableWallHack)
             {
                 foreach (var entity in entities)
                 {
                     // check if entity on screen
                     if (EntityOnScreen(entity))
                     {
-                        // draw methods
-                        DrawBox(entity);
-
                         if (enableLine)
                         {
                             DrawLine(entity);
@@ -103,6 +114,14 @@ namespace eclipse_external
                         if (enableHealthInfo)
                         {
                             DrawHealth(entity);
+                        }
+                        if (enableESP)
+                        {
+                            DrawBox(entity);
+                        }
+                        if (enableNickName)
+                        {
+                            DrawName(entity);
                         }
                     }
                 }
@@ -121,100 +140,112 @@ namespace eclipse_external
         }
 
         // draw methods
-        private void DrawHealth(Entity entity)
+
+        private void DrawName(Entity entity)
         {
             if (enableFr) // оффаем своих
             {
                 if (entity.team == localPlayer.team)
                     return;
             }
-            // calculate bar height
-
-            float entityHeight = entity.position2D.Y - entity.viewPosition2D.Y + 5;
 
             // get box location
+            float entityHeight = entity.position2D.Y - entity.viewPosition2D.Y;
             float boxLeft = entity.viewPosition2D.X - entityHeight / 3;
             float boxRight = entity.viewPosition2D.X + entityHeight / 3;
 
-            // calculate health bar wight
-            float barPercentWight = 0.05f; // 5% of box wight
-            float barPixelWight = barPercentWight * (boxRight - boxLeft);
-            float barHeight = entityHeight * (entity.health / 100f);
-            
-            // calculate bar rectangle, two vectors
-            Vector2 barTop = new Vector2 (boxLeft - barPixelWight, entity.position2D.Y - barHeight);
+            // позиция текста под боксом
+            float nameX = (boxLeft + boxRight) / 2 - 15;
+            float nameY = entity.position2D.Y;
+            // ======== рисуем ========
+            Vector4 nameColor = new Vector4(1f, 1f, 1f, 1f); // белый цвет
+            drawList.AddText(new Vector2(nameX, nameY),
+                ImGui.ColorConvertFloat4ToU32(nameColor),
+                entity.name);
+        }
+
+        private void DrawHealth(Entity entity)
+        {
+            if (enableFr && entity.team == localPlayer.team)
+                return;
+
+            float entityHeight = entity.position2D.Y - entity.viewPosition2D.Y + 5;
+
+            float boxLeft = entity.viewPosition2D.X - entityHeight / 3;
+            float boxRight = entity.viewPosition2D.X + entityHeight / 3;
+
+            float barWidthPercent = 0.05f;
+            float barWidth = Math.Clamp(barWidthPercent * (boxRight - boxLeft), 2f, 6f);
+
+            float barHeight = entityHeight;
+            float healthPercent = Math.Clamp(entity.health / 100f, 0f, 1f);
+
+            // фон (пустой хп)
+            Vector2 barBgTop = new Vector2(boxLeft - barWidth, entity.viewPosition2D.Y);
+            Vector2 barBgBottom = new Vector2(boxLeft, entity.position2D.Y);
+            drawList.AddRectFilled(barBgTop, barBgBottom, ImGui.ColorConvertFloat4ToU32(new Vector4(0.1f, 0.1f, 0.1f, 1f)));
+
+            // текущий хп
+            Vector2 barTop = new Vector2(boxLeft - barWidth, entity.position2D.Y - barHeight * healthPercent);
             Vector2 barBottom = new Vector2(boxLeft, entity.position2D.Y);
 
-            Vector4 barColor;
-            // get bar color
-            if (entity.health > 75)
-            {
-                barColor = new Vector4(0, 1, 0, 1);
-            }
-            else
-            {
-                barColor = new Vector4(1f, 0.5f, 0f, 1f);
-                if (entity.health < 40)
-                {
-                    barColor = new Vector4(1, 0, 0, 1);
-                }
-            }
-            // draw health bar
+            // плавный цвет от красного до зелёного
+            Vector4 barColor = new Vector4(1f - healthPercent, healthPercent, 0f, 1f);
+
             drawList.AddRectFilled(barTop, barBottom, ImGui.ColorConvertFloat4ToU32(barColor));
-        } // health bar
+        }
         private void DrawBones(Entity entity)
         {
-            if (enableFr) // оффаем своих
-            {
-                if (entity.team == localPlayer.team)
-                    return;
-            }
+            if (enableFr && entity.team == localPlayer.team)
+                return;
 
             uint uintColor = ImGui.ColorConvertFloat4ToU32(boneColor);
 
-            float currentBoneThrisness = boneThicksness / entity.distance;
+            // ограничиваем толщину (не меньше 0.5 и не больше 2.5)
+            float currentBoneThickness = Math.Clamp(boneThicksness / entity.distance, 1.0f, 2.5f);
 
-            drawList.AddLine(entity.bones2D[1], entity.bones2D[2], uintColor, currentBoneThrisness);
-            drawList.AddLine(entity.bones2D[1], entity.bones2D[3], uintColor, currentBoneThrisness);
-            drawList.AddLine(entity.bones2D[1], entity.bones2D[6], uintColor, currentBoneThrisness);
-            drawList.AddLine(entity.bones2D[3], entity.bones2D[4], uintColor, currentBoneThrisness);
-            drawList.AddLine(entity.bones2D[6], entity.bones2D[7], uintColor, currentBoneThrisness);
-            drawList.AddLine(entity.bones2D[4], entity.bones2D[5], uintColor, currentBoneThrisness);
-            drawList.AddLine(entity.bones2D[7], entity.bones2D[8], uintColor, currentBoneThrisness);
-            drawList.AddLine(entity.bones2D[1], entity.bones2D[0], uintColor, currentBoneThrisness);
-            drawList.AddLine(entity.bones2D[0], entity.bones2D[9], uintColor, currentBoneThrisness);
-            drawList.AddLine(entity.bones2D[0], entity.bones2D[11], uintColor, currentBoneThrisness);
-            drawList.AddLine(entity.bones2D[9], entity.bones2D[10], uintColor, currentBoneThrisness);
-            drawList.AddLine(entity.bones2D[11], entity.bones2D[12], uintColor, currentBoneThrisness);
-            drawList.AddCircle(entity.bones2D[2], 3 + currentBoneThrisness, uintColor);
-
-        }// bones
-        private void DrawBox(Entity entity) // box
-        {
-            // calculate box height
-            float entityHeight = entity.position2D.Y - entity.viewPosition2D.Y;
-
-            // calculate box dimensions
-            Vector2 rectTop = new Vector2(entity.viewPosition2D.X - entityHeight / 3, entity.viewPosition2D.Y - 9); // высота 9
-
-            Vector2 rectBottom = new Vector2(entity.position2D.X + entityHeight / 3, entity.position2D.Y);
-
-            // disable friendly entities
-            if (enableFr)
+            // пары костей (родитель -> ребёнок)
+            int[,] bonePairs =
             {
-                if (localPlayer.team != entity.team)
-                {
-                    Vector4 boxColor = enemyColor;
-                    drawList.AddRect(rectTop, rectBottom, ImGui.ColorConvertFloat4ToU32(boxColor));
-                }
-            }
-            else
+              {1, 2}, {1, 3}, {1, 6},
+              {3, 4}, {4, 5}, {6, 7}, {7, 8},
+              {1, 0}, {0, 9}, {0, 11},
+              {9, 10}, {11, 12}
+    };
+
+            // рисуем линии
+            for (int i = 0; i < bonePairs.GetLength(0); i++)
             {
-                Vector4 boxColor = localPlayer.team == entity.team ? teamColor : enemyColor;
-                drawList.AddRect(rectTop, rectBottom, ImGui.ColorConvertFloat4ToU32(boxColor));
+                int a = bonePairs[i, 0];
+                int b = bonePairs[i, 1];
+
+                drawList.AddLine(entity.bones2D[a], entity.bones2D[b], uintColor, currentBoneThickness);
             }
+
+            // голова (обычно кость 2)
+            drawList.AddCircle(entity.bones2D[2], 3 + currentBoneThickness, uintColor);
         }
+        private void DrawBox(Entity entity)
+        {
+            if (enableFr && entity.team == localPlayer.team)
+                return; // не рисуем своих
 
+            // высота бокса
+            float entityHeight = entity.position2D.Y - entity.viewPosition2D.Y;
+            float widthFactor = 0.33f; // половина ширины бокса относительно высоты
+
+            // центр по X
+            float centerX = (entity.viewPosition2D.X + entity.position2D.X) / 2;
+
+            // координаты бокса
+            Vector2 rectTop = new Vector2(centerX - entityHeight * widthFactor, entity.viewPosition2D.Y - 5); // сверху немного выше головы
+            Vector2 rectBottom = new Vector2(centerX + entityHeight * widthFactor, entity.position2D.Y); // до ног
+
+            // цвет
+            Vector4 boxColor = (entity.team == localPlayer.team) ? teamColor : enemyColor;
+
+            drawList.AddRect(rectTop, rectBottom, ImGui.ColorConvertFloat4ToU32(boxColor));
+        }
         private void DrawLine(Entity entity) // line
         {
             // get correct color
