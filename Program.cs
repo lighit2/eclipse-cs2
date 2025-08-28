@@ -62,9 +62,9 @@ List<Entity> entities = new List<Entity>();
 Entity localPlayer = new Entity();
 
 // offsets.cs
-int dwEntityList = 0x1D154C8;
-int dwViewMatrix = 0x1E32830;
-int dwLocalPlayerPawn = 0x1BF14A0;
+int dwEntityList = 0x1D0FE08;
+int dwViewMatrix = 0x1E2D030;
+int dwLocalPlayerPawn = 0x1BEC440;
 
 // client.dll
 int m_vOldOrigin = 0x15B0;
@@ -77,7 +77,7 @@ int m_pGameSceneNode = 0x330;
 int m_iHealth = 0x34C;
 int m_iszPlayerName = 0x6E8;
 
-// anti-detect
+// anti-detect  
 Random rnd = new Random(unchecked(Environment.TickCount * 31 + DateTime.Now.Millisecond));
 
 IntPtr clientBase = IntPtr.Zero;

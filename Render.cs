@@ -155,7 +155,7 @@ namespace eclipse_external
             float boxRight = entity.viewPosition2D.X + entityHeight / 3;
 
             // позиция текста под боксом
-            float nameX = (boxLeft + boxRight) / 2 - 15;
+            float nameX = (boxLeft + boxRight) / 2 - 25;
             float nameY = entity.position2D.Y;
             // ======== рисуем ========
             Vector4 nameColor = new Vector4(1f, 1f, 1f, 1f); // белый цвет
