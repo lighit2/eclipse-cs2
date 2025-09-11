@@ -80,7 +80,7 @@ namespace eclipse_external
 
             // текст сверху
             drawList = ImGui.GetForegroundDrawList();
-            string versionText = "eclipse_v1.3.1 by devlor";
+            string versionText = "eclipse_v1.4 by devlor";
             Vector2 textSize = ImGui.CalcTextSize(versionText);
             Vector2 pos = new Vector2(ImGui.GetIO().DisplaySize.X - textSize.X - 10, 10);
 
